@@ -1,8 +1,8 @@
 class Thisyou < Formula
   desc "Terminal UI for exploring archived Reddit histories"
   homepage "https://github.com/martintrifunov/thisyou"
-  url "https://github.com/martintrifunov/thisyou/archive/refs/tags/v0.2.0.tar.gz"
-  sha256 "bf88f8b00018c4fbe157c696b21261423d7133b575d6842175e685f6e6b5b5a4"
+  url "https://github.com/martintrifunov/thisyou/archive/refs/tags/v0.3.0.tar.gz"
+  sha256 "0592a9b5500460c673bdeae0a25a12c8a9d0b36e2312ef13dd33d547b72d5fe1"
   license "MIT"
   head "https://github.com/martintrifunov/thisyou.git", branch: "main"
 
