@@ -16,10 +16,14 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Remove unrelated runner tap
+        shell: bash
+        run: brew untap aws/tap || true
       - uses: Homebrew/actions/setup-homebrew@a657b8b0cd35d0f65cce41fce9b24cf054b49869
         with:
           core: false
           cask: false
+          token: ${{ github.token }}
       - name: Read latest release
         id: release
         shell: bash
