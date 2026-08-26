@@ -1,0 +1,71 @@
+name: Update thisyou
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-thisyou
+
+jobs:
+  update:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Homebrew/actions/setup-homebrew@a657b8b0cd35d0f65cce41fce9b24cf054b49869
+        with:
+          core: false
+          cask: false
+      - name: Read latest release
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag=$(curl --fail --silent --show-error \
+            https://api.github.com/repos/martintrifunov/thisyou/releases/latest | \
+            ruby -rjson -e 'puts JSON.parse(STDIN.read).fetch("tag_name")')
+          version="${tag#v}"
+          url="https://github.com/martintrifunov/thisyou/archive/refs/tags/${tag}.tar.gz"
+          sha=$(curl --fail --location --silent --show-error "$url" | shasum -a 256 | cut -d' ' -f1)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Update formula
+        shell: bash
+        env:
+          URL: ${{ steps.release.outputs.url }}
+          SHA: ${{ steps.release.outputs.sha }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          ruby -e '
+            path = "Formula/thisyou.rb"
+            formula = File.read(path)
+            formula.sub!(/^  url ".*"$/, "  url \"#{ENV.fetch("URL")}\"")
+            formula.sub!(/^  sha256 ".*"$/, "  sha256 \"#{ENV.fetch("SHA")}\"")
+            File.write(path, formula)
+          '
+          if git diff --quiet -- Formula/thisyou.rb; then
+            echo "Formula already targets ${VERSION}."
+            exit 0
+          fi
+          brew audit --strict martintrifunov/tap/thisyou
+          brew install --build-from-source martintrifunov/tap/thisyou
+          brew test martintrifunov/tap/thisyou
+      - name: Commit update
+        shell: bash
+        env:
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          if git diff --quiet -- Formula/thisyou.rb; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add Formula/thisyou.rb
+          git commit -m "update thisyou to ${VERSION}"
+          git push
